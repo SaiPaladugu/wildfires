@@ -1,0 +1,176 @@
+\documentclass[sigconf,nonacm]{acmart}
+
+% Remove ACM-specific footer elements for class submission
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+\setcopyright{none}
+
+% Packages
+\usepackage{booktabs}
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{Predicting Wildfire Ignition Cause in Canada\\Using Machine Learning}
+
+\author{[Student Name 1]}
+\affiliation{%
+  \institution{Technical Expert -- Computer Science}
+  \institution{Carleton University}
+}
+\email{student1@cmail.carleton.ca}
+
+\author{[Student Name 2]}
+\affiliation{%
+  \institution{Domain Expert -- Geography}
+  \institution{Carleton University}
+}
+\email{student2@cmail.carleton.ca}
+
+\author{[Student Name 3]}
+\affiliation{%
+  \institution{Domain Expert -- Environmental Science}
+  \institution{Carleton University}
+}
+\email{student3@cmail.carleton.ca}
+
+\begin{abstract}
+This project develops a machine learning classification model to predict whether a wildfire in Canada was naturally caused (lightning) or human-caused. Using the Canadian National Fire Database (1972--2024) containing 14,485 fires with labeled causes, combined with Environment Canada climate data, we train and evaluate multiple classifiers. Preliminary analysis achieved 91.6\% accuracy and 0.891 ROC-AUC, demonstrating strong feasibility. Results will provide actionable insights for fire prevention resource allocation and targeted awareness campaigns.
+\end{abstract}
+
+\maketitle
+
+\section{Problem Statement}
+
+Wildfires represent one of Canada's most significant natural hazards. The 2023 fire season alone burned over 16 million hectares---more than double any previous record. Understanding wildfire \textit{cause} is critical for prevention: while natural fires (lightning-ignited) are largely unavoidable, human-caused fires are entirely preventable through targeted interventions.
+
+The Canadian National Fire Database (CNFDB) contains records of over 16,000 large fires (>200 hectares) from 1972--2024, with cause labels assigned by provincial fire management agencies. Approximately 86\% of large fires are naturally caused, while 14\% are human-caused. However, the relationship between environmental conditions and fire causation remains underexplored.
+
+\textbf{Research Question:} Can we accurately predict whether a wildfire was naturally or human-caused based on temporal, geographic, and climate features? Which factors most strongly distinguish these fire types?
+
+\section{Motivation}
+
+This research addresses a practical problem with significant societal impact:
+
+\begin{enumerate}
+    \item \textbf{Fire Prevention}: Human-caused fires are preventable. Identifying high-risk conditions enables targeted prevention campaigns.
+    
+    \item \textbf{Resource Allocation}: Fire agencies can optimize deployment by understanding when and where different fire types occur.
+    
+    \item \textbf{Policy Development}: Evidence-based insights inform regulations on campfires, industrial activities, and land use.
+    
+    \item \textbf{Climate Context}: As fire seasons lengthen due to climate change, understanding weather-causation relationships becomes critical.
+\end{enumerate}
+
+From a data science perspective, this project offers an excellent opportunity to apply the course concepts---data cleaning, exploratory analysis, feature engineering, and machine learning classification---to a real-world problem with reliable ground truth labels, interpretable features, and meaningful societal implications~\cite{flannigan}.
+
+\section{Objectives}
+
+\subsection{Primary Objective}
+Develop a machine learning classifier that predicts wildfire ignition cause (Natural vs. Human) with accuracy exceeding 85\%, using the CNFDB and Environment Canada climate data.
+
+\subsection{Secondary Objectives}
+\begin{itemize}
+    \item Identify key features distinguishing natural from human-caused fires through feature importance analysis
+    \item Analyze regional and seasonal patterns in fire causation across provinces
+    \item Integrate climate variables (temperature, precipitation, drought) to improve predictions
+    \item Provide actionable recommendations for fire management agencies
+\end{itemize}
+
+\section{Data Sources}
+
+\subsection{Canadian National Fire Database}
+Source: Natural Resources Canada, Canadian Forest Service~\cite{cwfis}
+
+\begin{itemize}
+    \item \textbf{Coverage}: 1972--2024, all provinces and territories
+    \item \textbf{Records}: 16,394 large fires; \textbf{14,485 with labeled cause}
+    \item \textbf{Target Variable}: \texttt{CAUSE} (N=Natural, H=Human)
+    \item \textbf{Features}: Date, province, fire size, detection method
+    \item \textbf{Label Quality}: Assigned by professional fire investigators; 88\% of records have known cause
+\end{itemize}
+
+\subsection{Environment Canada Climate Data}
+Source: Government of Canada~\cite{eccc}
+
+\begin{itemize}
+    \item \textbf{Coverage}: Daily observations from weather stations nationwide
+    \item \textbf{Variables}: Temperature, precipitation, snow, wind speed
+    \item \textbf{Integration}: Match fires to nearest stations for climate context
+\end{itemize}
+
+\section{Methodology}
+
+\subsection{Data Preparation}
+Load CNFDB fire data, filter to records with known cause labels, acquire climate data for fire-prone regions (BC, AB, ON, QC), and perform quality assessment.
+
+\subsection{Feature Engineering}
+\begin{itemize}
+    \item \textbf{Temporal}: Day of year (seasonality), month, year, weekend indicator
+    \item \textbf{Geographic}: Province encoding
+    \item \textbf{Climate}: Temperature anomalies, precipitation deficit
+    \item \textbf{Fire}: Log-transformed fire size
+\end{itemize}
+
+\subsection{Model Development}
+Train and compare: Logistic Regression (baseline), Random Forest, and Gradient Boosting. Address class imbalance (86\%/14\%) using class weights.
+
+\subsection{Evaluation}
+Stratified cross-validation with accuracy, precision, recall, F1, and ROC-AUC metrics. Feature importance analysis to interpret results.
+
+\section{Preliminary Results}
+
+A proof-of-concept using fire metadata features (no climate data yet) achieved:
+
+\begin{table}[h]
+\small
+\centering
+\caption{Model Performance (Test Set: 2,878 fires)}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{Accuracy} & \textbf{ROC-AUC} \\
+\midrule
+Logistic Regression & 90.8\% & 0.857 \\
+Random Forest & 91.8\% & 0.888 \\
+\textbf{Gradient Boosting} & \textbf{91.6\%} & \textbf{0.891} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key Finding}: Day of year is the strongest predictor (49\% importance). Natural fires peak in July--August (lightning season), while human fires have broader seasonal distribution. Integrating climate data is expected to further improve performance.
+
+\section{Expected Contributions}
+
+\begin{enumerate}
+    \item Validated ML model for wildfire cause prediction
+    \item Analysis of temporal and regional causation patterns
+    \item Recommendations for prevention resource allocation
+    \item Reproducible Python code and methodology
+\end{enumerate}
+
+\section{Tools \& Technologies}
+Python (pandas, scikit-learn, matplotlib), Jupyter notebooks for analysis, Git for version control.
+
+\section{Team Composition}
+\begin{itemize}
+    \item \textbf{Technical Expert} ([Name 1]): Machine learning model development, data pipeline, statistical analysis
+    \item \textbf{Domain Expert} ([Name 2]): Problem framing, ecological interpretation, fire science context
+    \item \textbf{Domain Expert} ([Name 3]): Policy implications, literature review, visualization
+\end{itemize}
+
+\bibliographystyle{ACM-Reference-Format}
+\begin{thebibliography}{3}
+
+\bibitem{cwfis}
+Canadian Forest Service. 2025. Canadian National Fire Database. Natural Resources Canada. \texttt{https://cwfis.cfs.nrcan.gc.ca/datamart}
+
+\bibitem{eccc}
+Environment and Climate Change Canada. Historical Climate Data. Government of Canada. \texttt{https://dd.weather.gc.ca/}
+
+\bibitem{flannigan}
+Flannigan, M.D., Krawchuk, M.A., de Groot, W.J., Wotton, B.M., and Gowman, L.M. 2009. Implications of changing climate for global wildland fire. \textit{International Journal of Wildland Fire}, 18(5), 483--507.
+
+\end{thebibliography}
+
+\end{document}

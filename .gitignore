@@ -1,0 +1,74 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Data files (too large for git)
+*.csv
+*.shp
+*.shx
+*.dbf
+*.prj
+*.sbn
+*.sbx
+*.cpg
+*.xml
+*.xlsx
+*.xls
+
+# Data directories
+NFDB_poly/
+NFDB_poly_large_fires/
+NFDB_point_stats/
+NBAC_2024_20250506/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Output files (can be regenerated)
+analysis_output/
+sample_project/outputs/
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+
+# Keep the PDF proposal
+!proposal/proposal.pdf
+!proposal.pdf
