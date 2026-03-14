@@ -17,29 +17,29 @@
 
 \title{Predicting Wildfire Ignition Cause in Canada\\Using Machine Learning and Climate Data}
 
-\author{[Student Name 1]}
+\author{Sai Paladugu}
 \affiliation{%
   \institution{Technical Expert -- Computer Science}
   \institution{Carleton University}
   \country{Canada}
 }
-\email{student1@cmail.carleton.ca}
+\email{saipaladugu@cmail.carleton.ca}
 
-\author{[Student Name 2]}
+\author{Ashok Sivathayalan}
 \affiliation{%
-  \institution{Domain Expert -- Geography}
+  \institution{Technical Expert -- Computer Science}
   \institution{Carleton University}
   \country{Canada}
 }
-\email{student2@cmail.carleton.ca}
+\email{ashoksivathayalan@cmail.carleton.ca}
 
-\author{[Student Name 3]}
+\author{Queenie Kwan}
 \affiliation{%
-  \institution{Domain Expert -- Environmental Science}
+  \institution{Domain Expert -- Program}
   \institution{Carleton University}
   \country{Canada}
 }
-\email{student3@cmail.carleton.ca}
+\email{queeniekwan@cmail.carleton.ca}
 
 \begin{abstract}
 We develop a machine learning model to predict whether a Canadian wildfire was naturally caused (lightning) or human-caused, using the Canadian National Fire Database (CNFDB, 1972--2024) integrated with daily climate observations from Environment Canada. We engineer 33 features spanning temporal seasonality, geographic location, fire characteristics, and antecedent climate conditions (7-day and 30-day windows). A Gradient Boosted Decision Tree (GBDT) achieves a PR-AUC of 0.943, ROC-AUC of 0.928, and F1-score of 0.854 on a held-out test set of 74,790 fires. Five-fold cross-validation confirms stability (ROC-AUC std $< 0.001$), and a permutation test yields $p < 0.001$. SHAP analysis reveals that temporal seasonality (day of year), geographic coordinates (latitude, longitude), and fire size are the strongest predictors, with climate variables providing meaningful additional signal. These findings offer actionable insights for fire prevention resource allocation and targeted awareness campaigns across Canadian provinces.
