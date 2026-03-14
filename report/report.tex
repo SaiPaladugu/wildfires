@@ -1,0 +1,480 @@
+\documentclass[sigconf,nonacm]{acmart}
+
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+\setcopyright{none}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{multirow}
+
+\graphicspath{{../outputs/}}
+
+\begin{document}
+
+\title{Predicting Wildfire Ignition Cause in Canada\\Using Machine Learning and Climate Data}
+
+\author{[Student Name 1]}
+\affiliation{%
+  \institution{Technical Expert -- Computer Science}
+  \institution{Carleton University}
+  \country{Canada}
+}
+\email{student1@cmail.carleton.ca}
+
+\author{[Student Name 2]}
+\affiliation{%
+  \institution{Domain Expert -- Geography}
+  \institution{Carleton University}
+  \country{Canada}
+}
+\email{student2@cmail.carleton.ca}
+
+\author{[Student Name 3]}
+\affiliation{%
+  \institution{Domain Expert -- Environmental Science}
+  \institution{Carleton University}
+  \country{Canada}
+}
+\email{student3@cmail.carleton.ca}
+
+\begin{abstract}
+We develop a machine learning model to predict whether a Canadian wildfire was naturally caused (lightning) or human-caused, using the Canadian National Fire Database (CNFDB, 1972--2024) integrated with daily climate observations from Environment Canada. We engineer 33 features spanning temporal seasonality, geographic location, fire characteristics, and antecedent climate conditions (7-day and 30-day windows). A Gradient Boosted Decision Tree (GBDT) achieves a PR-AUC of 0.943, ROC-AUC of 0.928, and F1-score of 0.854 on a held-out test set of 74,790 fires. Five-fold cross-validation confirms stability (ROC-AUC std $< 0.001$), and a permutation test yields $p < 0.001$. SHAP analysis reveals that temporal seasonality (day of year), geographic coordinates (latitude, longitude), and fire size are the strongest predictors, with climate variables providing meaningful additional signal. These findings offer actionable insights for fire prevention resource allocation and targeted awareness campaigns across Canadian provinces.
+\end{abstract}
+
+\maketitle
+
+% ============================================================================
+\section{Introduction}
+% ============================================================================
+
+Wildfires represent one of Canada's most significant natural hazards, with escalating frequency and severity driven by climate change~\cite{flannigan2009}. The 2023 fire season was historically unprecedented, burning over 16 million hectares---more than double any previous record---displacing thousands of residents and causing hazardous air quality across North America~\cite{tymstra2020}. Understanding \textit{why} fires start is critical for prevention: while natural fires (primarily lightning-ignited) are largely unavoidable, human-caused fires are entirely preventable through targeted interventions.
+
+The Canadian National Fire Database (CNFDB), maintained by Natural Resources Canada, contains records of over 442,000 fires from 1972 to 2024 with cause labels assigned by provincial fire management agencies~\cite{cwfis2025}. This provides a unique opportunity to study the relationship between environmental conditions and fire causation at a national scale. Prior studies have examined fire occurrence and behavior in Canada~\cite{stocks2002, wotton2010}, but the application of modern machine learning techniques to cause prediction with integrated climate data remains underexplored.
+
+In this work, we formulate the problem as a binary classification task: given a fire's temporal, geographic, and climate context, predict whether it was naturally or human-caused. We integrate daily climate observations from 16 Environment Canada weather stations across eight fire-prone provinces~\cite{eccc2025}, engineering features that capture both day-of-fire conditions and antecedent weather patterns (7-day and 30-day windows). Our Gradient Boosted Decision Tree achieves strong predictive performance (ROC-AUC 0.928, PR-AUC 0.943) with high statistical significance, and SHAP-based interpretability analysis reveals ecologically meaningful feature contributions.
+
+Our contributions are: (1) a validated machine learning model for wildfire cause prediction using the largest available Canadian fire dataset (374,037 fires); (2) integration of multi-scale antecedent climate conditions (7-day and 30-day windows) as predictive features; (3) comprehensive feature importance analysis via both gain-based importance and SHAP values~\cite{lundberg2017}; and (4) actionable insights for fire prevention resource allocation based on temporal, geographic, and climatic risk factors.
+
+The remainder of this paper is organized as follows. Section~2 reviews related work in wildfire prediction and cause analysis. Section~3 describes our data sources and spatial matching approach. Section~4 details the feature engineering pipeline and model. Section~5 presents classification results, statistical significance, and feature importance analysis. Section~6 discusses ecological interpretation, limitations, and comparison to prior work. Section~7 concludes with future directions.
+
+% ============================================================================
+\section{Related Work}
+% ============================================================================
+
+Wildfire prediction using machine learning has received growing attention in recent years. Jain et al.~\cite{jain2020} provide a comprehensive review of ML applications in wildfire science, identifying fire occurrence, behavior, and effects as key prediction targets. They note that gradient boosting methods consistently outperform other approaches for tabular fire data.
+
+Rodrigues and de la Riva~\cite{rodrigues2014} applied multiple ML algorithms (random forests, neural networks, support vector machines) to predict human-caused wildfire occurrence in Spain, achieving ROC-AUC values between 0.70 and 0.80 using landscape, demographic, and climate variables. Their work demonstrated the feasibility of cause prediction but operated at a regional scale with different data characteristics.
+
+In the Canadian context, Wotton et al.~\cite{wotton2010} modeled people-caused fire occurrence in Ontario using logistic regression with weather and temporal predictors, finding strong seasonal patterns. Coogan et al.~\cite{coogan2019} highlighted the need for improved understanding of fire causes in Canada, particularly as climate change extends fire seasons and increases human-wildland interface contact. Stocks et al.~\cite{stocks2002} documented spatial and temporal patterns of large fires in Canada from 1959--1997, establishing baseline knowledge about fire distribution.
+
+The Canadian Forest Fire Weather Index (FWI) system~\cite{vanwagner1987} provides standardized fire weather metrics used operationally. While we do not compute FWI directly (as it requires specific fuel moisture codes), our antecedent temperature and precipitation features serve as proxies for the drought and drying conditions that the FWI captures.
+
+Gradient boosting~\cite{friedman2001} has become a dominant method for tabular prediction tasks, consistently outperforming neural networks on structured data~\cite{chen2016}. Its advantages include: handling of heterogeneous feature types, robustness to missing values, built-in regularization via tree depth and subsampling, and interpretable feature importance. Subsequent developments like XGBoost~\cite{chen2016} have extended Friedman's original framework with scalability improvements, but the core algorithm remains the same. Recent advances in model interpretability, particularly SHAP (SHapley Additive exPlanations) values~\cite{lundberg2017}, allow fine-grained understanding of individual feature contributions based on cooperative game theory. SHAP values decompose each prediction into additive feature contributions, providing both global importance rankings and local (per-prediction) explanations.
+
+Balshi et al.~\cite{balshi2009} studied the response of area burned to climate change in western boreal North America, finding that warmer and drier conditions significantly increase fire activity. Their work highlights the importance of antecedent weather conditions---particularly drought---as predictors of fire behavior, motivating our inclusion of 7-day and 30-day climate features.
+
+% ============================================================================
+\section{Data Sources}
+% ============================================================================
+
+\subsection{Canadian National Fire Database (CNFDB)}
+
+The CNFDB, maintained by the Canadian Forest Service~\cite{cwfis2025}, is a standardized compilation of wildfire records from all Canadian fire management agencies. We use the point-location dataset, which contains 442,403 fire records spanning 1972--2024 across all provinces and territories. Each record includes:
+
+\begin{itemize}
+    \item \textbf{Location}: Latitude and longitude of fire origin
+    \item \textbf{Temporal}: Year, month, and day of detection
+    \item \textbf{Cause}: Classified as Natural (N), Human (H), Human-Prescribed Burn (H-PB), or Unknown (U)
+    \item \textbf{Size}: Final fire size in hectares
+    \item \textbf{Administrative}: Source agency (province/territory), fire type, response category
+\end{itemize}
+
+After filtering to fires with known cause labels (N, H, or H-PB) and valid geographic coordinates within the 1972--2024 range, our dataset contains \textbf{374,037 fires}. The class distribution is 45.9\% Natural and 54.1\% Human, reflecting the inclusion of all fire sizes (small fires are disproportionately human-caused).
+
+\subsection{Environment Canada Climate Data}
+
+We acquired daily climate observations from 16 weather stations operated by Environment and Climate Change Canada~\cite{eccc2025}. Stations were selected to provide geographic coverage across eight fire-prone provinces: British Columbia, Alberta, Saskatchewan, Manitoba, Ontario, Quebec, Northwest Territories, and Yukon Territory. Each station provides continuous daily records from 1972 to 2024, with variables including maximum, minimum, and mean temperature, total precipitation, rainfall, snowfall, snow on ground, and maximum wind gust speed.
+
+\subsection{Station Network}
+
+Table~\ref{tab:stations} summarizes the 16 weather stations used, selected for long continuous records spanning the fire data period.
+
+\begin{table}[t]
+\caption{Environment Canada Weather Stations Used}
+\label{tab:stations}
+\small
+\centering
+\begin{tabular}{llcc}
+\toprule
+\textbf{Station} & \textbf{Province} & \textbf{Lat} & \textbf{Lon} \\
+\midrule
+Barkerville & BC & 53.07 & $-$121.51 \\
+Agassiz CDA & BC & 49.24 & $-$121.76 \\
+Lethbridge CDA & AB & 49.70 & $-$112.77 \\
+Taber & AB & 49.79 & $-$112.12 \\
+Indian Head CDA & SK & 50.55 & $-$103.65 \\
+Muenster & SK & 52.33 & $-$105.00 \\
+Gretna & MB & 49.03 & $-$97.56 \\
+Oakbank & MB & 49.93 & $-$96.85 \\
+Belleville & ON & 44.15 & $-$77.39 \\
+Windsor & ON & 42.33 & $-$82.93 \\
+Danville & QC & 45.82 & $-$71.98 \\
+Richmond & QC & 45.63 & $-$72.13 \\
+Yohin & NT & 61.24 & $-$123.74 \\
+Cape Parry & NT & 70.17 & $-$124.72 \\
+Haines Junction & YT & 60.77 & $-$137.58 \\
+Shingle Point & YT & 68.95 & $-$137.22 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Spatial Matching}
+
+Each fire was matched to its nearest weather station using the haversine distance formula. The median fire-to-station distance is 327~km (90th percentile: 632~km). While this introduces spatial averaging of climate conditions, the antecedent features (7-day and 30-day windows) partially mitigate this by capturing broader regional weather patterns rather than point-specific conditions. Climate feature coverage varies: mean temperature is available for 72\% of fires, precipitation for 81\%, and 30-day antecedent precipitation for 99\%. Wind gust data has only 2.3\% coverage and contributes minimally to the model.
+
+% ============================================================================
+\section{Methodology}
+% ============================================================================
+
+\subsection{Feature Engineering}
+
+We engineer 33 features organized into five categories:
+
+\textbf{Temporal features (6):} Day of year (DOY), cyclically encoded as $\sin(2\pi \cdot \text{DOY}/365)$ and $\cos(2\pi \cdot \text{DOY}/365)$ to capture the circular nature of seasonality; month; year (to capture long-term trends); and a binary weekend indicator.
+
+\textbf{Geographic features (3):} Province code (label-encoded), latitude, and longitude. These capture regional variation in land use, population density, and fire management practices.
+
+\textbf{Fire characteristics (1):} Log-transformed fire size ($\log(1 + \text{hectares})$), which captures the tendency for natural fires to grow larger before detection.
+
+\textbf{Same-day climate (8):} Maximum, minimum, and mean temperature; total precipitation and rainfall; snow on ground; maximum wind gust; and diurnal temperature range (max $-$ min).
+
+\textbf{Antecedent climate (15):} For both 7-day and 30-day windows preceding each fire: mean and maximum temperature, total precipitation and rainfall, number of dry days (zero precipitation), and temperature range. Additionally, we compute a temperature anomaly (day-of-fire temperature minus 30-day mean) and a composite fire weather index ($T_\text{max} - 2 \times P + 0.5 \times W$, where $T_\text{max}$, $P$, and $W$ are maximum temperature, precipitation, and wind gust).
+
+Missing climate values are encoded as $-999$, which gradient boosting handles natively by learning optimal split directions for missing data.
+
+Table~\ref{tab:features} summarizes the complete feature set with data coverage.
+
+\begin{table}[t]
+\caption{Complete Feature Set (33 features)}
+\label{tab:features}
+\small
+\centering
+\begin{tabular}{llc}
+\toprule
+\textbf{Category} & \textbf{Feature} & \textbf{Coverage} \\
+\midrule
+\multirow{6}{*}{Temporal} & Day of year (raw) & 100\% \\
+ & Day of year (sin) & 100\% \\
+ & Day of year (cos) & 100\% \\
+ & Month & 100\% \\
+ & Year & 100\% \\
+ & Weekend indicator & 100\% \\
+\midrule
+\multirow{3}{*}{Geographic} & Province code & 100\% \\
+ & Latitude & 100\% \\
+ & Longitude & 100\% \\
+\midrule
+Fire & Log fire size (ha) & 100\% \\
+\midrule
+\multirow{8}{*}{Climate (day)} & Max temperature & 74\% \\
+ & Min temperature & 75\% \\
+ & Mean temperature & 72\% \\
+ & Total precipitation & 81\% \\
+ & Rainfall & 79\% \\
+ & Snow on ground & 67\% \\
+ & Wind gust & 2\% \\
+ & Diurnal temp range & 74\% \\
+\midrule
+\multirow{6}{*}{Climate (7d)} & Mean temperature & 75\% \\
+ & Max temperature & 77\% \\
+ & Total precipitation & 99\% \\
+ & Total rainfall & 99\% \\
+ & Dry days count & 99\% \\
+ & Temperature range & 76\% \\
+\midrule
+\multirow{6}{*}{Climate (30d)} & Mean temperature & 76\% \\
+ & Max temperature & 78\% \\
+ & Total precipitation & 99\% \\
+ & Total rainfall & 99\% \\
+ & Dry days count & 99\% \\
+ & Temperature range & 78\% \\
+\midrule
+\multirow{3}{*}{Derived} & Temperature anomaly & 72\% \\
+ & Fire weather index & 100\% \\
+ & Station distance & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Data Preprocessing}
+
+We apply several preprocessing steps before feature engineering. Fire records are filtered to those with known cause labels (N, H, or H-PB), valid geographic coordinates, and years 1972--2024. The cause label is binarized: Natural (N) $\to$ 0, Human (H and H-PB) $\to$ 1. Fire size is log-transformed using $\log(1 + x)$ to reduce right-skewness. Province codes are label-encoded as integers. For climate data, each fire is matched to its nearest weather station via haversine distance, and climate variables for the day of fire, 7-day antecedent window, and 30-day antecedent window are extracted. Missing values in climate features are encoded as $-999$ rather than imputed, allowing the GBDT to learn optimal split behavior for missing data.
+
+\subsection{Model}
+
+We select gradient boosting~\cite{friedman2001} for several reasons: (1) it handles mixed feature types (numeric, encoded categorical) without separate preprocessing; (2) it natively handles missing values; (3) it models non-linear interactions between features; and (4) it provides built-in feature importance estimates.
+
+We use scikit-learn's \texttt{GradientBoostingClassifier}~\cite{pedregosa2011} with the following hyperparameters: 500 maximum estimators with early stopping (patience 20), learning rate 0.05, maximum depth 5, minimum 20 samples per leaf, 80\% row subsampling per tree, and $\sqrt{p}$ column subsampling. A 10\% validation fraction is held out from training data for early stopping. To address the mild class imbalance (45.9\% Natural, 54.1\% Human), we apply sample weights inversely proportional to class frequency during training.
+
+\subsection{Evaluation Strategy}
+
+We use a stratified 80/20 train-test split (random state 42), yielding 299,160 training and 74,790 test samples. We report:
+
+\begin{itemize}
+    \item \textbf{PR-AUC} (Average Precision): Our primary metric, as it is more informative than ROC-AUC for evaluating performance on the positive (human-caused) class.
+    \item \textbf{ROC-AUC}: Area under the receiver operating characteristic curve.
+    \item \textbf{F1-score, precision, recall}: For both classes.
+    \item \textbf{MCC}: Matthews Correlation Coefficient, a balanced metric for binary classification.
+    \item \textbf{Brier score and log loss}: For probability calibration assessment.
+\end{itemize}
+
+For significance testing, we perform: (1)~five-fold stratified cross-validation; (2)~a permutation test with 1,000 iterations; and (3)~bootstrap 95\% confidence intervals with 1,000 resamples.
+
+% ============================================================================
+\section{Results}
+% ============================================================================
+
+\subsection{Classification Performance}
+
+Table~\ref{tab:metrics} presents the comprehensive evaluation metrics on the held-out test set.
+
+\begin{table}[t]
+\caption{GBDT Performance on Test Set (74,790 fires)}
+\label{tab:metrics}
+\small
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+PR-AUC (Average Precision) & 0.9431 \\
+ROC-AUC & 0.9284 \\
+Accuracy & 0.8486 \\
+F1-Score (Human class) & 0.8538 \\
+Precision (Human class) & 0.8940 \\
+Recall (Human class) & 0.8170 \\
+Specificity (Natural class) & 0.8858 \\
+Matthews Corr.\ Coef.\ (MCC) & 0.7005 \\
+Brier Score & 0.1076 \\
+Log Loss & 0.3430 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The model achieves a PR-AUC of 0.943, substantially above the 0.541 baseline (the positive class prevalence). The ROC-AUC of 0.928 confirms strong discrimination between classes. The MCC of 0.700 indicates the model performs well on both classes simultaneously.
+
+Table~\ref{tab:classreport} presents the per-class classification report.
+
+\begin{table}[t]
+\caption{Per-Class Classification Report}
+\label{tab:classreport}
+\small
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
+\midrule
+Natural & 0.804 & 0.886 & 0.843 & 34,326 \\
+Human & 0.894 & 0.817 & 0.854 & 40,464 \\
+\midrule
+Weighted Avg & 0.853 & 0.849 & 0.849 & 74,790 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The confusion matrix (Figure~\ref{fig:results}, top-right) shows that 30,405 natural fires and 33,061 human-caused fires are correctly classified, with 3,921 false positives (natural fires incorrectly labeled as human) and 7,403 false negatives (human fires missed). The false negative rate for human fires (18.3\%) is higher than the false positive rate (11.4\%), reflecting the model's slight conservatism in predicting human cause---a desirable property for a system where prevention resources should be deployed with high confidence.
+
+The calibration curve (Figure~\ref{fig:results}, bottom-center) shows the model's predicted probabilities are well-calibrated, closely following the diagonal. The Brier score of 0.108 and log loss of 0.343 confirm reliable probability estimates, which is important if the model were deployed as a risk scoring system.
+
+The predicted probability distributions (Figure~\ref{fig:results}, bottom-right) show good separation between classes, with natural fires concentrated at low probabilities and human fires at high probabilities, though some overlap exists in the 0.3--0.6 range where the model is less certain.
+
+Table~\ref{tab:baseline} compares our model against baseline benchmarks.
+
+\begin{table}[t]
+\caption{Comparison Against Baselines}
+\label{tab:baseline}
+\small
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{ROC-AUC} & \textbf{PR-AUC} \\
+\midrule
+Random classifier & 0.500 & 0.541 \\
+Majority class & -- & -- \\
+\textbf{GBDT (ours)} & \textbf{0.928} & \textbf{0.943} \\
+\midrule
+\multicolumn{3}{l}{\textit{Improvement over random:}} \\
+Absolute & +0.428 & +0.402 \\
+Relative & +85.7\% & +74.3\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{experiment_results.png}
+    \caption{Model evaluation overview: (a) ROC curve, (b) precision-recall curve, (c) confusion matrix, (d) top 15 feature importances, (e) calibration curve, (f) predicted probability distribution by true class.}
+    \label{fig:results}
+\end{figure*}
+
+\subsection{Statistical Significance}
+
+Five-fold stratified cross-validation confirms the stability of our results (Table~\ref{tab:cv}).
+
+\begin{table}[t]
+\caption{5-Fold Cross-Validation Results}
+\label{tab:cv}
+\small
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{Mean} & \textbf{Std} & \textbf{Range} \\
+\midrule
+ROC-AUC & 0.9285 & 0.0004 & [0.928, 0.929] \\
+PR-AUC & 0.9424 & 0.0004 & [0.942, 0.943] \\
+F1 & 0.8572 & 0.0007 & [0.857, 0.859] \\
+Accuracy & 0.8494 & 0.0009 & [0.849, 0.851] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The permutation test (1,000 iterations) yields a p-value of $< 0.001$, confirming that the observed ROC-AUC of 0.928 is highly unlikely under the null hypothesis. Bootstrap 95\% confidence intervals further confirm tight bounds: ROC-AUC [0.927, 0.930], PR-AUC [0.942, 0.945].
+
+\subsection{Feature Importance}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{feature_importance_gain.png}
+    \caption{Top 20 features ranked by mean decrease in impurity (Gini importance).}
+    \label{fig:gain}
+\end{figure}
+
+Figure~\ref{fig:gain} shows the gain-based feature importance. The top five features account for 59\% of total importance: day-of-year sine encoding (19.2\%), latitude (12.5\%), longitude (10.1\%), raw day of year (9.1\%), and month (8.5\%). Together, temporal and geographic features account for approximately 70\% of the model's predictive power.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{shap_beeswarm.png}
+    \caption{SHAP beeswarm plot showing the distribution and direction of feature effects on the prediction of human-caused fires.}
+    \label{fig:shap}
+\end{figure}
+
+SHAP analysis (Figure~\ref{fig:shap}) provides directional interpretation: positive SHAP values push the prediction toward the human-caused class. Key findings include:
+
+\begin{itemize}
+    \item \textbf{Day of Year}: Low DOY-sine values (winter/spring fires) strongly predict human cause, while high values (mid-summer) predict natural cause.
+    \item \textbf{Latitude}: Lower latitudes (more populated southern regions) predict human cause; higher latitudes predict natural.
+    \item \textbf{Longitude}: Western fires (BC, AB) show different patterns from eastern fires (ON, QC).
+    \item \textbf{Fire Size}: Smaller fires are more likely human-caused; larger fires are more likely natural.
+\end{itemize}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{partial_dependence.png}
+    \caption{Partial dependence plots for the top four features showing their marginal effect on predicted probability.}
+    \label{fig:pdp}
+\end{figure}
+
+Partial dependence plots (Figure~\ref{fig:pdp}) confirm these relationships, showing smooth, interpretable response curves for the top features.
+
+% ============================================================================
+\section{Discussion}
+% ============================================================================
+
+\subsection{Ecological Interpretation}
+
+The dominance of temporal features aligns with established fire science: lightning storms, the primary natural ignition source, peak during July--August in Canada's boreal and sub-boreal forests~\cite{flannigan2009}. Human-caused fires, conversely, correlate with recreational and agricultural activities that span a broader season---spring prescribed burns, summer camping, and autumn land clearing~\cite{wotton2010}.
+
+The strong predictive power of geographic coordinates reflects the fundamental spatial segregation between human and natural fire regimes. Southern, more populated regions have higher human-caused fire rates, while remote northern boreal and subarctic regions are dominated by lightning fires~\cite{stocks2002}. This is consistent with our geographic scatter analysis (Figure~\ref{fig:geo}), which shows clear spatial clustering of fire types.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{geographic_scatter.png}
+    \caption{Geographic distribution of fires by cause across Canada (50,000 sample).}
+    \label{fig:geo}
+\end{figure}
+
+Climate features contribute approximately 17\% of total importance. Antecedent conditions---particularly 7-day and 30-day temperature patterns---capture the drought and fire weather conditions that facilitate fire ignition and spread. The temperature anomaly feature (day-of-fire temperature relative to 30-day mean) provides a signal of unusual heat events that may differentially affect natural vs.\ human fire occurrence.
+
+\subsection{Temporal Trends}
+
+Figure~\ref{fig:temporal} shows the annual fire count by cause from 1972 to 2024. Human-caused fires show more consistent year-to-year counts, while natural fire years exhibit high variability driven by lightning storm patterns and drought cycles~\cite{balshi2009}.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{temporal_trend.png}
+    \caption{Annual fire count by cause (1972--2024), showing the higher variability of natural fire years.}
+    \label{fig:temporal}
+\end{figure}
+
+\subsection{Provincial Variation}
+
+The class distribution analysis (Figure~\ref{fig:classdist}) reveals substantial provincial variation. Quebec and Ontario have the highest proportions of human-caused fires (reflecting higher population density and agricultural activity), while British Columbia and the northern territories are dominated by natural fires. Weekend effects are minimal, suggesting that day-of-week is not a major driver of human ignitions at the national level.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{class_distribution.png}
+    \caption{Fire cause distribution by month, province, decade, and day of week.}
+    \label{fig:classdist}
+\end{figure}
+
+\subsection{Climate Feature Relationships}
+
+Figure~\ref{fig:corr} shows the correlation structure among climate features. Same-day and antecedent temperature features are highly correlated ($r > 0.8$), as expected, while precipitation features form a separate cluster. The temperature anomaly feature (day-of-fire minus 30-day mean) shows low correlation with both groups, confirming it captures distinct information about unusual heat events. This correlation structure suggests that, while individual climate features are partially redundant, the GBDT effectively selects complementary signals during tree construction.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{climate_correlation.png}
+    \caption{Pairwise correlation matrix of climate features, showing the expected clustering of temperature and precipitation variables.}
+    \label{fig:corr}
+\end{figure}
+
+\subsection{Comparison to Prior Work}
+
+Our PR-AUC of 0.943 and ROC-AUC of 0.928 compare favorably to prior wildfire cause prediction studies. Rodrigues and de la Riva~\cite{rodrigues2014} achieved ROC-AUC values of 0.70--0.80 on Spanish fires. The improvement is likely due to our larger dataset (374K vs.\ thousands of fires), the strong temporal signal in Canadian fire data, and the integration of multi-scale climate features.
+
+\subsection{Limitations}
+
+Several limitations should be acknowledged. First, our 16 weather stations provide coarse spatial resolution; the median 327~km fire-to-station distance means climate features represent regional rather than local conditions. Second, we do not compute the Canadian Forest Fire Weather Index (FWI)~\cite{vanwagner1987}, which would require specialized fuel moisture calculations. Third, we do not incorporate land use, population density, road proximity, or vegetation type, which could improve human-cause prediction. Finally, our model uses fire size as a feature, which is determined after ignition; a purely pre-ignition model would exclude this.
+
+% ============================================================================
+\section{Conclusion and Future Work}
+% ============================================================================
+
+We have developed a GBDT classifier that predicts wildfire ignition cause in Canada with a PR-AUC of 0.943, ROC-AUC of 0.928, and F1-score of 0.854. The model is statistically significant ($p < 0.001$) and stable across cross-validation folds. Temporal seasonality, geographic location, and fire size are the dominant predictors, with climate variables providing additional discriminative power.
+
+These results have practical implications for fire management agencies. By identifying the temporal and regional conditions most associated with human-caused fires, agencies can target prevention campaigns---such as fire bans, public awareness, and increased patrols---to the specific times and locations where human ignitions are most likely.
+
+Several directions for future work are promising:
+
+\begin{enumerate}
+    \item \textbf{Fire Weather Index integration}: Computing the full Canadian FWI~\cite{vanwagner1987} from hourly weather data would provide standardized fire danger ratings as features.
+    \item \textbf{Landscape features}: Incorporating proximity to roads, population centers, campgrounds, and industrial sites would directly capture human ignition risk factors.
+    \item \textbf{Vegetation data}: Fuel type maps and NDVI (Normalized Difference Vegetation Index) from satellite imagery would capture fire susceptibility.
+    \item \textbf{Deep learning}: Spatial-temporal architectures (e.g., convolutional or transformer-based models) could learn complex interactions between location, time, and weather patterns.
+    \item \textbf{Operational deployment}: Developing a real-time system that provides daily fire-cause risk assessments for fire management agencies, integrated with existing CWFIS infrastructure.
+    \item \textbf{Denser station network}: Using interpolated climate surfaces (e.g., gridded climate products) instead of point station data would reduce the spatial matching error.
+\end{enumerate}
+
+\subsection{Implications for Fire Management}
+
+Our results have several practical implications for fire management agencies across Canada.
+
+\textbf{Targeted prevention campaigns.} The strong seasonal signal (Figure~\ref{fig:classdist}a) suggests that fire prevention resources should be concentrated during spring and early summer (April--June) when human-caused fires are disproportionately common. During mid-summer (July--August), resources can be redirected toward natural fire detection and suppression, as lightning-caused fires dominate this period.
+
+\textbf{Regional prioritization.} Provincial variation in human-caused fire rates (Figure~\ref{fig:classdist}b) enables region-specific strategies. Eastern provinces with higher human-caused rates should prioritize awareness campaigns, fire bans during dry periods, and enforcement of burning regulations. Northern territories, where natural fires dominate, should focus on early detection systems and remote firefighting capacity.
+
+\textbf{Risk scoring.} The well-calibrated probability outputs (Brier score 0.108) mean the model could be deployed as a risk scoring system, providing daily estimates of human-cause probability based on current weather conditions and location. This would support dynamic resource allocation and preemptive fire ban decisions.
+
+\textbf{Post-hoc investigation.} For fires where the cause is initially unknown, the model's predictions could guide investigation priorities, directing limited investigative resources toward fires with high human-cause probability.
+
+% ============================================================================
+% REFERENCES
+% ============================================================================
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\end{document}

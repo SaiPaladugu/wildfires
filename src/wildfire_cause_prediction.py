@@ -38,8 +38,8 @@ plt.rcParams['font.size'] = 11
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-BASE_PATH = Path("/Users/saipaladugu/Desktop/Dev/weather")
-OUTPUT_PATH = BASE_PATH / "sample_project" / "outputs"
+BASE_PATH = Path(__file__).resolve().parent.parent / "data"
+OUTPUT_PATH = BASE_PATH.parent / "outputs"
 OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
 RANDOM_STATE = 42
@@ -57,14 +57,14 @@ print("="*80)
 
 # Load fire data
 print("\n[1.1] Loading Canadian National Fire Database (NFDB)...")
-fire_dbf = BASE_PATH / "NFDB_poly_large_fires" / "NFDB_poly_1972to2024_20250630_large_fires.dbf"
+fire_dbf = next(BASE_PATH.glob("NFDB_poly_large_fires/*.dbf"))
 table = DBF(str(fire_dbf), encoding='utf-8', ignore_missing_memofile=True)
 fire_df = pd.DataFrame(iter(table))
 print(f"      Loaded {len(fire_df):,} fire records")
 
 # Load climate data samples
 print("\n[1.2] Loading Climate Data Samples...")
-climate_files = list(BASE_PATH.glob("climate_daily_*.csv"))
+climate_files = list((BASE_PATH / "climate").glob("climate_daily_*.csv"))
 climate_dfs = []
 for f in climate_files:
     try:

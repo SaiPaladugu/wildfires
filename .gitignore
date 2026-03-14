@@ -17,6 +17,7 @@ env/
 *.xls
 
 # Data directories
+data/
 NFDB_poly/
 NFDB_poly_large_fires/
 NFDB_point_stats/
@@ -56,6 +57,8 @@ wheels/
 
 # Output files (can be regenerated)
 analysis_output/
+outputs/
+!outputs/*.png
 sample_project/outputs/
 
 # LaTeX auxiliary files

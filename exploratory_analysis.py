@@ -29,8 +29,8 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-whitegrid')
 sns.set_palette("husl")
 
-BASE_PATH = Path("/Users/saipaladugu/Desktop/Dev/weather")
-OUTPUT_PATH = BASE_PATH / "analysis_output"
+BASE_PATH = Path(__file__).resolve().parent / "data"
+OUTPUT_PATH = BASE_PATH.parent / "analysis_output"
 OUTPUT_PATH.mkdir(exist_ok=True)
 
 print("="*70)
@@ -46,7 +46,7 @@ print("="*70)
 
 # Load NFDB polygon data (large fires - more manageable size)
 print("\n[1.1] Loading NFDB Large Fires (1972-2024)...")
-large_fires_dbf = BASE_PATH / "NFDB_poly_large_fires" / "NFDB_poly_1972to2024_20250630_large_fires.dbf"
+large_fires_dbf = next(BASE_PATH.glob("NFDB_poly_large_fires/*.dbf"))
 
 try:
     # Read DBF file
@@ -60,7 +60,7 @@ except Exception as e:
 
 # Also try loading the recent fires (2021-2024)
 print("\n[1.2] Loading NFDB Recent Fires (2021-2024)...")
-recent_fires_dbf = BASE_PATH / "NFDB_poly" / "NFDB_poly_2021to2024_20250630.dbf"
+recent_fires_dbf = next(BASE_PATH.glob("NFDB_poly/*.dbf"), None)
 
 try:
     table2 = DBF(str(recent_fires_dbf), encoding='utf-8', ignore_missing_memofile=True)
@@ -72,7 +72,7 @@ except Exception as e:
 
 # Load Excel statistics
 print("\n[1.3] Loading NFDB Point Statistics...")
-stats_file = BASE_PATH / "NFDB_point_stats" / "NFDB_point_20250519_stats.xlsx"
+stats_file = next(BASE_PATH.glob("NFDB_point_stats/*.xlsx"), None)
 try:
     fire_stats = pd.read_excel(stats_file)
     print(f"   Loaded statistics with shape: {fire_stats.shape}")
@@ -136,7 +136,7 @@ print("\n" + "="*70)
 print("SECTION 3: CLIMATE DATA EXPLORATION")
 print("="*70)
 
-climate_files = list(BASE_PATH.glob("climate_daily_*.csv"))
+climate_files = list((BASE_PATH / "climate").glob("climate_daily_*.csv"))
 print(f"\n[3.1] Found {len(climate_files)} climate data files:")
 for f in climate_files:
     print(f"   - {f.name}")
