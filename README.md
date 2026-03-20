@@ -154,8 +154,8 @@ MIT License - See LICENSE file for details.
 
 ## Authors
 
-- [Student Name 1] - Technical Expert
-- [Student Name 2] - Domain Expert  
-- [Student Name 3] - Domain Expert
+- Sai Paladugu - Technical Expert
+- Ashok Sivathayalan - Technical Expert  
+- Queenie Kwan - Domain Expert
 
 Carleton University, Winter 2026

@@ -28,122 +28,125 @@ OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 RANDOM_STATE = 42
 np.random.seed(RANDOM_STATE)
 
-# =============================================================================
-# 1. LOAD FIRE DATA
-# =============================================================================
-print("=" * 70)
-print("STEP 1: LOADING FIRE DATA")
-print("=" * 70)
+cache_path = BASE_PATH / "joined_fire_climate.parquet"
 
-# Use point data — it has lat/lon for matching to weather stations
-dbf_path = next(BASE_PATH.glob("NFDB_point/*.dbf"))
-print(f"Loading: {dbf_path.name}")
-table = DBF(str(dbf_path), encoding='utf-8', ignore_missing_memofile=True)
-fire_df = pd.DataFrame(iter(table))
-print(f"Total fire records: {len(fire_df):,}")
-print(f"Columns: {list(fire_df.columns)}")
+if not cache_path.exists():
+    # =============================================================================
+    # 1. LOAD FIRE DATA
+    # =============================================================================
+    print("=" * 70)
+    print("STEP 1: LOADING FIRE DATA")
+    print("=" * 70)
 
-# Filter to fires with known cause (Natural or Human)
-valid_causes = ['N', 'H', 'H-PB']
-df = fire_df[fire_df['CAUSE'].isin(valid_causes)].copy()
-df['target'] = df['CAUSE'].apply(lambda x: 0 if x == 'N' else 1)  # 0=Natural, 1=Human
-print(f"\nFires with known cause: {len(df):,}")
-print(f"  Natural (0): {(df['target']==0).sum():,} ({(df['target']==0).mean()*100:.1f}%)")
-print(f"  Human   (1): {(df['target']==1).sum():,} ({(df['target']==1).mean()*100:.1f}%)")
+    # Use point data — it has lat/lon for matching to weather stations
+    dbf_path = next(BASE_PATH.glob("NFDB_point/*.dbf"))
+    print(f"Loading: {dbf_path.name}")
+    table = DBF(str(dbf_path), encoding='utf-8', ignore_missing_memofile=True)
+    fire_df = pd.DataFrame(iter(table))
+    print(f"Total fire records: {len(fire_df):,}")
+    print(f"Columns: {list(fire_df.columns)}")
 
-# Clean numeric columns
-for col in ['YEAR', 'MONTH', 'DAY', 'LATITUDE', 'LONGITUDE', 'SIZE_HA']:
-    df[col] = pd.to_numeric(df[col], errors='coerce')
+    # Filter to fires with known cause (Natural or Human)
+    valid_causes = ['N', 'H', 'H-PB']
+    df = fire_df[fire_df['CAUSE'].isin(valid_causes)].copy()
+    df['target'] = df['CAUSE'].apply(lambda x: 0 if x == 'N' else 1)  # 0=Natural, 1=Human
+    print(f"\nFires with known cause: {len(df):,}")
+    print(f"  Natural (0): {(df['target']==0).sum():,} ({(df['target']==0).mean()*100:.1f}%)")
+    print(f"  Human   (1): {(df['target']==1).sum():,} ({(df['target']==1).mean()*100:.1f}%)")
 
-# Filter to reasonable year range and valid coordinates
-df = df[(df['YEAR'] >= 1972) & (df['YEAR'] <= 2024)].copy()
-df = df[df['LATITUDE'].notna() & df['LONGITUDE'].notna()].copy()
-df = df[(df['MONTH'] >= 1) & (df['MONTH'] <= 12)].copy()
-print(f"After filtering (1972-2024, valid coords): {len(df):,}")
+    # Clean numeric columns
+    for col in ['YEAR', 'MONTH', 'DAY', 'LATITUDE', 'LONGITUDE', 'SIZE_HA']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
 
-# =============================================================================
-# 2. LOAD CLIMATE DATA
-# =============================================================================
-print("\n" + "=" * 70)
-print("STEP 2: LOADING CLIMATE DATA")
-print("=" * 70)
+    # Filter to reasonable year range and valid coordinates
+    df = df[(df['YEAR'] >= 1972) & (df['YEAR'] <= 2024)].copy()
+    df = df[df['LATITUDE'].notna() & df['LONGITUDE'].notna()].copy()
+    df = df[(df['MONTH'] >= 1) & (df['MONTH'] <= 12)].copy()
+    print(f"After filtering (1972-2024, valid coords): {len(df):,}")
 
-climate_dir = BASE_PATH / "climate"
-climate_files = sorted(climate_dir.glob("climate_daily_*.csv"))
-print(f"Climate files: {len(climate_files)}")
+    # =============================================================================
+    # 2. LOAD CLIMATE DATA
+    # =============================================================================
+    print("\n" + "=" * 70)
+    print("STEP 2: LOADING CLIMATE DATA")
+    print("=" * 70)
 
-climate_dfs = []
-for f in climate_files:
-    try:
-        cdf = pd.read_csv(f, encoding='utf-8-sig')
-        climate_dfs.append(cdf)
-    except:
-        pass
+    climate_dir = BASE_PATH / "climate"
+    climate_files = sorted(climate_dir.glob("climate_daily_*.csv"))
+    print(f"Climate files: {len(climate_files)}")
 
-climate_df = pd.concat(climate_dfs, ignore_index=True)
-print(f"Total climate observations: {len(climate_df):,}")
+    climate_dfs = []
+    for f in climate_files:
+        try:
+            cdf = pd.read_csv(f, encoding='utf-8-sig')
+            climate_dfs.append(cdf)
+        except:
+            pass
 
-# Extract station info for spatial matching
-stations = climate_df.groupby('Station Name').agg({
-    'Longitude (x)': 'first',
-    'Latitude (y)': 'first',
-    'Climate ID': 'first'
-}).reset_index()
-stations.columns = ['station_name', 'stn_lon', 'stn_lat', 'climate_id']
-print(f"Unique stations: {len(stations)}")
-print(stations[['station_name', 'stn_lat', 'stn_lon']].to_string(index=False))
+    climate_df = pd.concat(climate_dfs, ignore_index=True)
+    print(f"Total climate observations: {len(climate_df):,}")
 
-# Clean climate data
-climate_df['Year'] = pd.to_numeric(climate_df['Year'], errors='coerce')
-climate_df['Month'] = pd.to_numeric(climate_df['Month'], errors='coerce')
-climate_df['Day'] = pd.to_numeric(climate_df['Day'], errors='coerce')
+    # Extract station info for spatial matching
+    stations = climate_df.groupby('Station Name').agg({
+        'Longitude (x)': 'first',
+        'Latitude (y)': 'first',
+        'Climate ID': 'first'
+    }).reset_index()
+    stations.columns = ['station_name', 'stn_lon', 'stn_lat', 'climate_id']
+    print(f"Unique stations: {len(stations)}")
+    print(stations[['station_name', 'stn_lat', 'stn_lon']].to_string(index=False))
 
-for col in ['Max Temp (°C)', 'Min Temp (°C)', 'Mean Temp (°C)',
-            'Total Rain (mm)', 'Total Snow (cm)', 'Total Precip (mm)',
-            'Spd of Max Gust (km/h)', 'Snow on Grnd (cm)']:
-    if col in climate_df.columns:
-        climate_df[col] = pd.to_numeric(climate_df[col], errors='coerce')
+    # Clean climate data
+    climate_df['Year'] = pd.to_numeric(climate_df['Year'], errors='coerce')
+    climate_df['Month'] = pd.to_numeric(climate_df['Month'], errors='coerce')
+    climate_df['Day'] = pd.to_numeric(climate_df['Day'], errors='coerce')
 
-# =============================================================================
-# 3. SPATIAL MATCHING — FIRE TO NEAREST WEATHER STATION
-# =============================================================================
-print("\n" + "=" * 70)
-print("STEP 3: MATCHING FIRES TO NEAREST WEATHER STATIONS")
-print("=" * 70)
+    for col in ['Max Temp (°C)', 'Min Temp (°C)', 'Mean Temp (°C)',
+                'Total Rain (mm)', 'Total Snow (cm)', 'Total Precip (mm)',
+                'Spd of Max Gust (km/h)', 'Snow on Grnd (cm)']:
+        if col in climate_df.columns:
+            climate_df[col] = pd.to_numeric(climate_df[col], errors='coerce')
 
-def haversine_km(lat1, lon1, lat2, lon2):
-    """Vectorized haversine distance in km."""
-    R = 6371
-    lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
-    return 2 * R * np.arcsin(np.sqrt(a))
+    # =============================================================================
+    # 3. SPATIAL MATCHING — FIRE TO NEAREST WEATHER STATION
+    # =============================================================================
+    print("\n" + "=" * 70)
+    print("STEP 3: MATCHING FIRES TO NEAREST WEATHER STATIONS")
+    print("=" * 70)
 
-# For each fire, find nearest station
-stn_lats = stations['stn_lat'].values.astype(float)
-stn_lons = stations['stn_lon'].values.astype(float)
-stn_names = stations['station_name'].values
+    def haversine_km(lat1, lon1, lat2, lon2):
+        """Vectorized haversine distance in km."""
+        R = 6371
+        lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+        return 2 * R * np.arcsin(np.sqrt(a))
 
-fire_lats = df['LATITUDE'].values
-fire_lons = df['LONGITUDE'].values
+    # For each fire, find nearest station
+    stn_lats = stations['stn_lat'].values.astype(float)
+    stn_lons = stations['stn_lon'].values.astype(float)
+    stn_names = stations['station_name'].values
 
-nearest_station = []
-nearest_dist = []
+    fire_lats = df['LATITUDE'].values
+    fire_lons = df['LONGITUDE'].values
 
-for i in range(len(df)):
-    dists = haversine_km(fire_lats[i], fire_lons[i], stn_lats, stn_lons)
-    idx = np.argmin(dists)
-    nearest_station.append(stn_names[idx])
-    nearest_dist.append(dists[idx])
+    nearest_station = []
+    nearest_dist = []
 
-df['nearest_station'] = nearest_station
-df['station_dist_km'] = nearest_dist
+    for i in range(len(df)):
+        dists = haversine_km(fire_lats[i], fire_lons[i], stn_lats, stn_lons)
+        idx = np.argmin(dists)
+        nearest_station.append(stn_names[idx])
+        nearest_dist.append(dists[idx])
 
-print(f"Median fire-to-station distance: {np.median(nearest_dist):.0f} km")
-print(f"90th percentile distance: {np.percentile(nearest_dist, 90):.0f} km")
-print(f"\nFires per station:")
-print(df['nearest_station'].value_counts().to_string())
+    df['nearest_station'] = nearest_station
+    df['station_dist_km'] = nearest_dist
+
+    print(f"Median fire-to-station distance: {np.median(nearest_dist):.0f} km")
+    print(f"90th percentile distance: {np.percentile(nearest_dist, 90):.0f} km")
+    print(f"\nFires per station:")
+    print(df['nearest_station'].value_counts().to_string())
 
 # =============================================================================
 # 4. JOIN CLIMATE DATA TO FIRES
@@ -152,8 +155,6 @@ print("\n" + "=" * 70)
 print("STEP 4: JOINING CLIMATE DATA TO FIRES")
 print("=" * 70)
 
-# Check for cached joined data
-cache_path = BASE_PATH / "joined_fire_climate.parquet"
 if cache_path.exists():
     print(f"Loading cached data from {cache_path.name}...")
     df = pd.read_parquet(cache_path)
@@ -568,6 +569,29 @@ cum = 0
 for _, row in importance.head(20).iterrows():
     cum += row['importance']
     print(f"  {row['feature']:<30} {row['importance']:>10.4f} {cum:>10.4f}")
+
+# --- Grouped importance ---
+feature_groups = {
+    'Temporal':    ['doy', 'doy_sin', 'doy_cos', 'month', 'year', 'is_weekend'],
+    'Geographic':  ['province_code', 'latitude', 'longitude'],
+    'Fire size':   ['log_size'],
+    'Climate':     ['temp_max', 'temp_min', 'temp_mean', 'precip', 'rain',
+                    'snow_ground', 'wind_gust', 'diurnal_range',
+                    'temp_mean_7d', 'temp_max_7d', 'precip_total_7d', 'rain_total_7d',
+                    'dry_days_7d', 'temp_range_7d',
+                    'temp_mean_30d', 'temp_max_30d', 'precip_total_30d', 'rain_total_30d',
+                    'dry_days_30d', 'temp_range_30d',
+                    'temp_anomaly', 'fire_weather_index'],
+    'Station':     ['station_dist'],
+}
+
+imp_lookup = importance.set_index('feature')['importance']
+print("\nGrouped feature importance:")
+print(f"  {'Group':<15} {'Importance':>10} {'Share':>8}")
+print(f"  {'-'*35}")
+for group, feats in feature_groups.items():
+    group_imp = sum(imp_lookup.get(f, 0.0) for f in feats)
+    print(f"  {group:<15} {group_imp:>10.4f} {group_imp*100:>7.1f}%")
 
 # =============================================================================
 # 11. SAVE VISUALIZATIONS
