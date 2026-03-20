@@ -74,10 +74,16 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Download the data
+### 4. Download the fire data
 1. Go to [CWFIS Datamart](https://cwfis.cfs.nrcan.gc.ca/datamart)
 2. Download "National Fire Database fire polygon data"
 3. Extract the shapefiles to the project root
+
+### 5. Download the climate data
+1. Go to the [Climate Data Extraction Tool](https://climate-change.canada.ca/climate-data/#/daily-climate-data)
+2. Go to "Technical information and metadata" to download the list of detailed information for each Daily climate station
+3. Run filter_stations.py to generate the station list
+4. Run download_climate_data.sh to download the daily climate data
 
 ## Running the Experiment
 
