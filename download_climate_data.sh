@@ -4,27 +4,11 @@
 # Each request downloads one year of daily data per station
 
 DATA_DIR="data/climate"
+STATIONS_CSV="data/stations_1972_2024.csv"
 mkdir -p "$DATA_DIR"
 
-# Station ID, start year, end year, name (for filename)
-STATIONS=(
-    "568,1972,2024,Barkerville_BC"
-    "707,1972,2023,Agassiz_BC"
-    "2265,1972,2024,Lethbridge_AB"
-    "2315,1972,2024,Taber_AB"
-    "2925,1972,2024,IndianHead_SK"
-    "2973,1972,2023,Muenster_SK"
-    "3605,1972,2024,Gretna_MB"
-    "3641,1972,2022,Oakbank_MB"
-    "4859,1972,2024,Belleville_ON"
-    "4715,1972,2024,Windsor_ON"
-    "5345,1972,2024,Danville_QC"
-    "5440,1972,2024,Richmond_QC"
-    "1635,1972,2024,Yohin_NT"
-    "1633,1972,2023,CapeParry_NT"
-    "1556,1972,2024,HainesJunction_YT"
-    "1596,1972,2023,ShinglePoint_YT"
-)
+# Read station ID, start year, end year, name from CSV (skip header)
+mapfile -t STATIONS < <(tail -n +2 "$STATIONS_CSV")
 
 BASE_URL="https://climate.weather.gc.ca/climate_data/bulk_data_e.html"
 TOTAL=0
