@@ -380,8 +380,8 @@
                 <div class="reveal">
                     <h3 style="color: var(--accent); margin-bottom: var(--element-gap);">Environment Canada Climate</h3>
                     <ul class="content-list">
-                        <li><strong>16 weather stations</strong> across 8 provinces</li>
-                        <li><strong>842</strong> daily climate CSV files</li>
+                        <li><strong>231 weather stations</strong> across all provinces &amp; territories</li>
+                        <li><strong>12,243</strong> daily climate CSV files</li>
                         <li>Temperature, precipitation, snow, wind</li>
                         <li>Matched to fires via haversine distance</li>
                     </ul>
@@ -391,11 +391,26 @@
     </section>
 
     <!-- ============================================
-         SLIDE 6: GEOGRAPHIC DISTRIBUTION
+         SLIDE 6: STATION LOCATIONS
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
         <span class="slide-num">05</span>
+        <div class="slide-content">
+            <h2 class="reveal">Weather Station Network</h2>
+            <div class="figure-container reveal">
+                <img src="assets/station_locations.png" alt="Map of 231 Environment Canada weather stations across Canada">
+            </div>
+            <p class="figure-caption reveal">231 stations with full 1972–2024 coverage — density highest in southern Quebec and BC, sparse above 55°N.</p>
+        </div>
+    </section>
+
+    <!-- ============================================
+         SLIDE 7: GEOGRAPHIC DISTRIBUTION
+         ============================================ -->
+    <section class="slide dark">
+        <div class="accent-bar"></div>
+        <span class="slide-num">06</span>
         <div class="slide-content">
             <h2 class="reveal">Geographic Distribution</h2>
             <div class="figure-container reveal">
@@ -406,11 +421,11 @@
     </section>
 
     <!-- ============================================
-         SLIDE 7: FEATURE ENGINEERING
+         SLIDE 8: FEATURE ENGINEERING
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">06</span>
+        <span class="slide-num">07</span>
         <div class="slide-content">
             <h2 class="reveal">Feature Engineering — 33 Features</h2>
             <div class="metrics-grid reveal">
@@ -425,11 +440,11 @@
     </section>
 
     <!-- ============================================
-         SLIDE 8: MODEL
+         SLIDE 9: MODEL
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">07</span>
+        <span class="slide-num">08</span>
         <div class="slide-content">
             <h2 class="reveal">Model: Gradient Boosted Decision Tree</h2>
             <div class="two-col">
@@ -457,32 +472,32 @@
     </section>
 
     <!-- ============================================
-         SLIDE 9: KEY RESULTS
+         SLIDE 10: KEY RESULTS
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">08</span>
+        <span class="slide-num">09</span>
         <div class="slide-content">
             <h2 class="reveal">Key Results</h2>
             <div class="metrics-grid reveal">
-                <div class="metric-card"><div class="metric-value">0.943</div><div class="metric-label">PR-AUC</div></div>
-                <div class="metric-card"><div class="metric-value">0.928</div><div class="metric-label">ROC-AUC</div></div>
-                <div class="metric-card"><div class="metric-value">84.9%</div><div class="metric-label">Accuracy</div></div>
-                <div class="metric-card"><div class="metric-value">0.854</div><div class="metric-label">F1 (Human)</div></div>
-                <div class="metric-card"><div class="metric-value">0.700</div><div class="metric-label">MCC</div></div>
+                <div class="metric-card"><div class="metric-value">0.946</div><div class="metric-label">PR-AUC</div></div>
+                <div class="metric-card"><div class="metric-value">0.932</div><div class="metric-label">ROC-AUC</div></div>
+                <div class="metric-card"><div class="metric-value">85.3%</div><div class="metric-label">Accuracy</div></div>
+                <div class="metric-card"><div class="metric-value">0.859</div><div class="metric-label">F1 (Human)</div></div>
+                <div class="metric-card"><div class="metric-value">0.709</div><div class="metric-label">MCC</div></div>
             </div>
             <p class="reveal" style="text-align: center; margin-top: var(--content-gap);">
-                <strong>+74% PR-AUC improvement</strong> over random baseline (0.541) &mdash; <strong>p &lt; 0.001</strong>
+                <strong>+75% PR-AUC improvement</strong> over random baseline (0.541) &mdash; <strong>p &lt; 0.001</strong>
             </p>
         </div>
     </section>
 
     <!-- ============================================
-         SLIDE 10: ROC + PR CURVES
+         SLIDE 11: ROC + PR CURVES
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">09</span>
+        <span class="slide-num">10</span>
         <div class="slide-content">
             <h2 class="reveal">ROC &amp; Precision-Recall Curves</h2>
             <div class="figure-container reveal">
@@ -492,33 +507,33 @@
     </section>
 
     <!-- ============================================
-         SLIDE 11: CONFUSION MATRIX
+         SLIDE 12: CONFUSION MATRIX
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">10</span>
+        <span class="slide-num">11</span>
         <div class="slide-content" style="align-items: center;">
             <h2 class="reveal">Confusion Matrix</h2>
             <table class="cm-table reveal">
                 <tr><th></th><th></th><th colspan="2">Predicted</th></tr>
                 <tr><th></th><th></th><th>Natural</th><th>Human</th></tr>
-                <tr><th rowspan="2" style="writing-mode: vertical-lr; transform: rotate(180deg);">Actual</th><th>Natural</th><td class="cm-tn">30,405</td><td class="cm-fp">3,921</td></tr>
-                <tr><th>Human</th><td class="cm-fn">7,403</td><td class="cm-tp">33,061</td></tr>
+                <tr><th rowspan="2" style="writing-mode: vertical-lr; transform: rotate(180deg);">Actual</th><th>Natural</th><td class="cm-tn">30,347</td><td class="cm-fp">3,979</td></tr>
+                <tr><th>Human</th><td class="cm-fn">7,008</td><td class="cm-tp">33,456</td></tr>
             </table>
             <div class="metrics-grid reveal" style="margin-top: var(--content-gap); max-width: 600px;">
                 <div class="metric-card"><div class="metric-value" style="font-size: var(--h3-size);">89.4%</div><div class="metric-label">Precision (Human)</div></div>
-                <div class="metric-card"><div class="metric-value" style="font-size: var(--h3-size);">81.7%</div><div class="metric-label">Recall (Human)</div></div>
-                <div class="metric-card"><div class="metric-value" style="font-size: var(--h3-size);">88.6%</div><div class="metric-label">Specificity</div></div>
+                <div class="metric-card"><div class="metric-value" style="font-size: var(--h3-size);">82.7%</div><div class="metric-label">Recall (Human)</div></div>
+                <div class="metric-card"><div class="metric-value" style="font-size: var(--h3-size);">88.4%</div><div class="metric-label">Specificity</div></div>
             </div>
         </div>
     </section>
 
     <!-- ============================================
-         SLIDE 12: SHAP
+         SLIDE 13: SHAP
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">11</span>
+        <span class="slide-num">12</span>
         <div class="slide-content">
             <h2 class="reveal">SHAP Feature Importance</h2>
             <div class="figure-container reveal">
@@ -529,11 +544,11 @@
     </section>
 
     <!-- ============================================
-         SLIDE 13: TOP FEATURES
+         SLIDE 14: TOP FEATURES
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">12</span>
+        <span class="slide-num">13</span>
         <div class="slide-content">
             <h2 class="reveal">Top Predictive Features</h2>
             <div class="figure-container reveal">
@@ -543,11 +558,11 @@
     </section>
 
     <!-- ============================================
-         SLIDE 14: PARTIAL DEPENDENCE
+         SLIDE 15: PARTIAL DEPENDENCE
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">13</span>
+        <span class="slide-num">14</span>
         <div class="slide-content">
             <h2 class="reveal">Partial Dependence Plots</h2>
             <div class="figure-container reveal">
@@ -558,11 +573,11 @@
     </section>
 
     <!-- ============================================
-         SLIDE 15: TEMPORAL TRENDS
+         SLIDE 16: TEMPORAL TRENDS
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">14</span>
+        <span class="slide-num">15</span>
         <div class="slide-content">
             <h2 class="reveal">Temporal Trends (1972&ndash;2024)</h2>
             <div class="figure-container reveal">
@@ -573,11 +588,11 @@
     </section>
 
     <!-- ============================================
-         SLIDE 16: CLASS DISTRIBUTION
+         SLIDE 17: CLASS DISTRIBUTION
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">15</span>
+        <span class="slide-num">16</span>
         <div class="slide-content">
             <h2 class="reveal">Class Distribution Analysis</h2>
             <div class="figure-container reveal">
@@ -587,20 +602,20 @@
     </section>
 
     <!-- ============================================
-         SLIDE 17: STATISTICAL SIGNIFICANCE
+         SLIDE 18: STATISTICAL SIGNIFICANCE
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">16</span>
+        <span class="slide-num">17</span>
         <div class="slide-content">
             <h2 class="reveal">Statistical Significance</h2>
             <div class="two-col">
                 <div class="reveal">
                     <h3 style="color: var(--accent); margin-bottom: var(--element-gap);">5-Fold Cross-Validation</h3>
                     <ul class="content-list">
-                        <li>ROC-AUC: 0.929 &plusmn; 0.0004</li>
-                        <li>PR-AUC: 0.942 &plusmn; 0.0004</li>
-                        <li>F1: 0.857 &plusmn; 0.0007</li>
+                        <li>ROC-AUC: 0.932 &plusmn; 0.0003</li>
+                        <li>PR-AUC: 0.945 &plusmn; 0.0002</li>
+                        <li>F1: 0.863 &plusmn; 0.0009</li>
                         <li>Extremely low variance across folds</li>
                     </ul>
                 </div>
@@ -609,8 +624,8 @@
                     <ul class="content-list">
                         <li><strong>Permutation test:</strong> p &lt; 0.001 (1,000 iterations)</li>
                         <li><strong>Bootstrap 95% CI:</strong></li>
-                        <li>ROC-AUC: [0.927, 0.930]</li>
-                        <li>PR-AUC: [0.942, 0.945]</li>
+                        <li>ROC-AUC: [0.931, 0.934]</li>
+                        <li>PR-AUC: [0.945, 0.948]</li>
                     </ul>
                 </div>
             </div>
@@ -618,35 +633,35 @@
     </section>
 
     <!-- ============================================
-         SLIDE 18: IMPLICATIONS
+         SLIDE 19: IMPLICATIONS
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">17</span>
+        <span class="slide-num">18</span>
         <div class="slide-content">
             <h2 class="reveal">Implications</h2>
             <ul class="content-list reveal">
                 <li><strong>Targeted prevention:</strong> Focus campaigns on April&ndash;June when human fires peak</li>
                 <li><strong>Regional prioritization:</strong> Eastern provinces (ON, QC) need awareness programs; northern territories need detection systems</li>
-                <li><strong>Risk scoring:</strong> Well-calibrated probabilities (Brier 0.108) enable daily risk assessments</li>
+                <li><strong>Risk scoring:</strong> Well-calibrated probabilities (Brier 0.104) enable daily risk assessments</li>
                 <li><strong>Investigation:</strong> Guide post-hoc cause investigation for unknown-cause fires</li>
             </ul>
         </div>
     </section>
 
     <!-- ============================================
-         SLIDE 19: LIMITATIONS & FUTURE WORK
+         SLIDE 20: LIMITATIONS & FUTURE WORK
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">18</span>
+        <span class="slide-num">19</span>
         <div class="slide-content">
             <h2 class="reveal">Limitations &amp; Future Work</h2>
             <div class="two-col">
                 <div class="reveal">
                     <h3 style="color: var(--accent); margin-bottom: var(--element-gap);">Limitations</h3>
                     <ul class="content-list">
-                        <li>Coarse station network (median 327 km)</li>
+                        <li>Station coverage uneven (median 102 km, remote areas worse)</li>
                         <li>No FWI (Fire Weather Index) computed</li>
                         <li>Fire size is a post-ignition feature</li>
                         <li>No land-use or population data</li>

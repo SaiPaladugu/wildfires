@@ -3,12 +3,14 @@ Generate publication-quality plots for the wildfire cause prediction report.
 Loads cached data, re-trains the GBDT (deterministic), produces all figures.
 """
 
+import urllib.request
 import pandas as pd
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
+import geopandas as gpd
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingClassifier
@@ -21,6 +23,44 @@ BASE_PATH = Path(__file__).resolve().parent.parent / "data"
 OUTPUT_PATH = Path(__file__).resolve().parent.parent / "outputs"
 OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 RANDOM_STATE = 42
+
+CANADA_XLIM = (-145, -50)
+CANADA_YLIM = (42, 85)
+
+# Natural Earth URLs — 50m resolution is a good balance of detail vs. file size
+_NE_BASE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson"
+_BOUNDARY_CACHE = BASE_PATH / "boundaries"
+
+def _load_boundaries():
+    """Return (provinces_gdf, countries_gdf), downloading and caching on first run."""
+    _BOUNDARY_CACHE.mkdir(exist_ok=True)
+    provinces_path = _BOUNDARY_CACHE / "ne_50m_admin_1_provinces.geojson"
+    countries_path = _BOUNDARY_CACHE / "ne_50m_admin_0_countries.geojson"
+
+    if not provinces_path.exists():
+        print("  Downloading provincial boundaries (one-time)...")
+        urllib.request.urlretrieve(
+            f"{_NE_BASE}/ne_50m_admin_1_states_provinces.geojson", provinces_path
+        )
+    if not countries_path.exists():
+        print("  Downloading country boundaries (one-time)...")
+        urllib.request.urlretrieve(
+            f"{_NE_BASE}/ne_50m_admin_0_countries.geojson", countries_path
+        )
+
+    provinces = gpd.read_file(provinces_path)
+    countries = gpd.read_file(countries_path)
+    return provinces[provinces['iso_a2'] == 'CA'], countries[countries['ISO_A2'] == 'CA']
+
+
+def add_canada_map(ax, provinces, canada):
+    """Draw Canada outline and provincial boundaries on ax."""
+    canada.plot(ax=ax, facecolor='#f5f5f0', edgecolor='#555555', linewidth=1.2, zorder=0)
+    provinces.plot(ax=ax, facecolor='none', edgecolor='#888888', linewidth=0.5, zorder=1)
+    ax.set_xlim(CANADA_XLIM)
+    ax.set_ylim(CANADA_YLIM)
+    ax.set_aspect('equal')
+
 
 plt.rcParams.update({
     'font.size': 11, 'axes.titlesize': 13, 'axes.labelsize': 11,
@@ -106,6 +146,9 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 n_neg, n_pos = sum(y_train == 0), sum(y_train == 1)
 sample_weights = np.where(y_train == 1, n_neg / n_pos, 1.0)
+
+print("Loading boundary data...")
+canada_provinces, canada_outline = _load_boundaries()
 
 print("Training GBDT...")
 gbdt = GradientBoostingClassifier(
@@ -265,6 +308,7 @@ print("Generating geographic scatter...")
 sample = model_df.sample(min(50000, len(model_df)), random_state=RANDOM_STATE)
 
 fig, ax = plt.subplots(figsize=(12, 8))
+add_canada_map(ax, canada_provinces, canada_outline)
 natural = sample[sample['target'] == 0]
 human = sample[sample['target'] == 1]
 ax.scatter(natural['longitude'], natural['latitude'], c='#2ecc71', alpha=0.08, s=3, label='Natural', rasterized=True)
@@ -273,8 +317,6 @@ ax.set_xlabel('Longitude')
 ax.set_ylabel('Latitude')
 ax.set_title('Geographic Distribution of Fires by Cause', fontsize=13, fontweight='bold')
 ax.legend(markerscale=5, framealpha=0.9)
-ax.set_xlim(-145, -50)
-ax.set_ylim(42, 72)
 plt.tight_layout()
 plt.savefig(OUTPUT_PATH / 'geographic_scatter.png')
 plt.close()
@@ -328,6 +370,36 @@ plt.tight_layout()
 plt.savefig(OUTPUT_PATH / 'climate_correlation.png')
 plt.close()
 print(f"  Saved climate_correlation.png")
+
+# =============================================================================
+# PLOT 8: Weather Station Locations
+# =============================================================================
+print("Generating station locations map...")
+stations_csv = BASE_PATH / "stations_1972_2024.csv"
+source_csv = BASE_PATH / "climate-stations.csv"
+
+stations_filtered = pd.read_csv(stations_csv)
+source = pd.read_csv(source_csv)
+stations_geo = stations_filtered.merge(
+    source[['STN_ID', 'x', 'y']], left_on='STATION_ID', right_on='STN_ID', how='left'
+).dropna(subset=['x', 'y'])
+
+fig, ax = plt.subplots(figsize=(12, 8))
+add_canada_map(ax, canada_provinces, canada_outline)
+ax.scatter(
+    stations_geo['x'], stations_geo['y'],
+    c='#e67e22', s=25, zorder=5, edgecolors='#333333', linewidths=0.4,
+    label=f'Weather stations (n={len(stations_geo)})'
+)
+ax.set_xlabel('Longitude')
+ax.set_ylabel('Latitude')
+ax.set_title('Environment Canada Weather Station Locations (1972–2024 coverage)',
+             fontsize=13, fontweight='bold')
+ax.legend(framealpha=0.9)
+plt.tight_layout()
+plt.savefig(OUTPUT_PATH / 'station_locations.png')
+plt.close()
+print(f"  Saved station_locations.png")
 
 print("\nAll plots generated successfully!")
 print(f"Output directory: {OUTPUT_PATH}")
