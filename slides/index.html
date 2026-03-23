@@ -196,6 +196,7 @@
             top: clamp(0.4rem, 0.8vw, 0.6rem);
             width: 6px; height: 6px; background: var(--accent); border-radius: 1px;
         }
+        .content-list li.sub-item::before { left: 1.2em; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.4); }
 
         /* Figure slides */
         .figure-container {
@@ -369,22 +370,76 @@
             <h2 class="reveal">Data Sources</h2>
             <div class="two-col">
                 <div class="reveal">
-                    <h3 style="color: var(--accent); margin-bottom: var(--element-gap);">CNFDB Fire Data</h3>
+                    <h3 style="color: var(--accent); margin-bottom: var(--element-gap);">CNFDB Fire Records</h3>
                     <ul class="content-list">
-                        <li><strong>374,037</strong> fires with known cause</li>
-                        <li>1972&ndash;2024, all provinces</li>
-                        <li>Location, date, size, cause label</li>
-                        <li>45.9% Natural / 54.1% Human</li>
+                        <li><strong>374,037</strong> fires with known cause (1972–2024)</li>
+                        <li>Per-fire fields: lat/lon, detection date, final size (ha), cause label</li>
+                        <li>Cause labels: Natural (N), Human (H)</li>
+                        <li>Class split: 45.9% Natural / 54.1% Human</li>
                     </ul>
                 </div>
                 <div class="reveal">
                     <h3 style="color: var(--accent); margin-bottom: var(--element-gap);">Environment Canada Climate</h3>
                     <ul class="content-list">
-                        <li><strong>231 weather stations</strong> across all provinces &amp; territories</li>
-                        <li><strong>12,243</strong> daily climate CSV files</li>
-                        <li>Temperature, precipitation, snow, wind</li>
-                        <li>Matched to fires via haversine distance</li>
+                        <li><strong>231</strong> weather stations, <strong>12,243</strong> daily CSV files</li>
+                        <li>Variables: T<sub>max</sub>, T<sub>min</sub>, T<sub>mean</sub>, precipitation, rainfall, snow on ground, wind gust</li>
+                        <li>Each fire matched to nearest station via haversine distance</li>
+                        <li>Median fire-to-station distance: <strong>102 km</strong> (90th pctl: 372 km)</li>
                     </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+         SLIDE 5b: DATA PIPELINE & COVERAGE
+         ============================================ -->
+    <section class="slide dark">
+        <div class="accent-bar"></div>
+        <span class="slide-num">05</span>
+        <div class="slide-content">
+            <h2 class="reveal">Data Pipeline &amp; Feature Coverage</h2>
+            <div class="two-col">
+                <div class="reveal">
+                    <h3 style="color: var(--accent); margin-bottom: var(--element-gap);">Spatial Matching Pipeline</h3>
+                    <ul class="content-list">
+                        <li>For each fire, compute haversine distance to all 231 stations</li>
+                        <li>Select nearest station, extract climate for <strong>3 time windows</strong>:</li>
+                        <li class="sub-item" style="padding-left: 2.4em;">Day of fire</li>
+                        <li class="sub-item" style="padding-left: 2.4em;">7-day antecedent window</li>
+                        <li class="sub-item" style="padding-left: 2.4em;">30-day antecedent window</li>
+                        <li>Missing values encoded as −999 (GBDT learns optimal splits natively)</li>
+                    </ul>
+                </div>
+                <div class="reveal">
+                    <h3 style="color: var(--accent); margin-bottom: var(--element-gap);">Climate Feature Coverage</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: var(--body-size);">
+                        <tbody><tr style="border-bottom: 2px solid rgba(255,255,255,0.2);">
+                            <th style="text-align: left; padding: 0.3em 0.5em; color: rgba(255,255,255,0.5); font-weight: 600;">Feature Group</th>
+                            <th style="text-align: right; padding: 0.3em 0.5em; color: rgba(255,255,255,0.5); font-weight: 600;">Coverage</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                            <td style="padding: 0.3em 0.5em; color: rgba(255,255,255,0.7);">Temporal + Geographic</td>
+                            <td style="text-align: right; padding: 0.3em 0.5em; color: #2ecc71; font-weight: 700;">100%</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                            <td style="padding: 0.3em 0.5em; color: rgba(255,255,255,0.7);">Same-day temperature</td>
+                            <td style="text-align: right; padding: 0.3em 0.5em; color: rgba(255,255,255,0.9); font-weight: 700;">83–84%</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                            <td style="padding: 0.3em 0.5em; color: rgba(255,255,255,0.7);">Same-day precipitation</td>
+                            <td style="text-align: right; padding: 0.3em 0.5em; color: rgba(255,255,255,0.9); font-weight: 700;">83%</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                            <td style="padding: 0.3em 0.5em; color: rgba(255,255,255,0.7);">7d / 30d aggregates</td>
+                            <td style="text-align: right; padding: 0.3em 0.5em; color: #2ecc71; font-weight: 700;">86–100%</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.3em 0.5em; color: rgba(255,255,255,0.7);">Wind gust</td>
+                            <td style="text-align: right; padding: 0.3em 0.5em; color: var(--accent); font-weight: 700;">12%</td>
+                        </tr>
+                    </tbody></table>
+                    <p style="font-size: var(--small-size); color: rgba(255,255,255,0.4); margin-top: var(--element-gap);">Aggregation windows tolerate individual missing days; wind gust is too sparse to contribute meaningfully.</p>
                 </div>
             </div>
         </div>
@@ -393,9 +448,9 @@
     <!-- ============================================
          SLIDE 6: STATION LOCATIONS
          ============================================ -->
-    <section class="slide dark">
+    <section class="slide dark visible">
         <div class="accent-bar"></div>
-        <span class="slide-num">05</span>
+        <span class="slide-num">06</span>
         <div class="slide-content">
             <h2 class="reveal">Weather Station Network</h2>
             <div class="figure-container reveal">
@@ -410,7 +465,7 @@
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">06</span>
+        <span class="slide-num">07</span>
         <div class="slide-content">
             <h2 class="reveal">Geographic Distribution</h2>
             <div class="figure-container reveal">
@@ -425,7 +480,7 @@
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">07</span>
+        <span class="slide-num">08</span>
         <div class="slide-content">
             <h2 class="reveal">Feature Engineering — 33 Features</h2>
             <div class="metrics-grid reveal">
@@ -444,7 +499,7 @@
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">08</span>
+        <span class="slide-num">09</span>
         <div class="slide-content">
             <h2 class="reveal">Model: Gradient Boosted Decision Tree</h2>
             <div class="two-col">
@@ -476,7 +531,7 @@
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">09</span>
+        <span class="slide-num">10</span>
         <div class="slide-content">
             <h2 class="reveal">Key Results</h2>
             <div class="metrics-grid reveal">
@@ -497,7 +552,7 @@
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">10</span>
+        <span class="slide-num">11</span>
         <div class="slide-content">
             <h2 class="reveal">ROC &amp; Precision-Recall Curves</h2>
             <div class="figure-container reveal">
@@ -511,7 +566,7 @@
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">11</span>
+        <span class="slide-num">12</span>
         <div class="slide-content" style="align-items: center;">
             <h2 class="reveal">Confusion Matrix</h2>
             <table class="cm-table reveal">
@@ -533,7 +588,7 @@
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">12</span>
+        <span class="slide-num">13</span>
         <div class="slide-content">
             <h2 class="reveal">SHAP Feature Importance</h2>
             <div class="figure-container reveal">
@@ -548,7 +603,7 @@
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">13</span>
+        <span class="slide-num">14</span>
         <div class="slide-content">
             <h2 class="reveal">Top Predictive Features</h2>
             <div class="figure-container reveal">
@@ -562,7 +617,7 @@
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">14</span>
+        <span class="slide-num">15</span>
         <div class="slide-content">
             <h2 class="reveal">Partial Dependence Plots</h2>
             <div class="figure-container reveal">
@@ -577,7 +632,7 @@
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">15</span>
+        <span class="slide-num">16</span>
         <div class="slide-content">
             <h2 class="reveal">Temporal Trends (1972&ndash;2024)</h2>
             <div class="figure-container reveal">
@@ -592,7 +647,7 @@
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">16</span>
+        <span class="slide-num">17</span>
         <div class="slide-content">
             <h2 class="reveal">Class Distribution Analysis</h2>
             <div class="figure-container reveal">
@@ -606,7 +661,7 @@
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">17</span>
+        <span class="slide-num">18</span>
         <div class="slide-content">
             <h2 class="reveal">Statistical Significance</h2>
             <div class="two-col">
@@ -637,7 +692,7 @@
          ============================================ -->
     <section class="slide dark">
         <div class="accent-bar"></div>
-        <span class="slide-num">18</span>
+        <span class="slide-num">19</span>
         <div class="slide-content">
             <h2 class="reveal">Implications</h2>
             <ul class="content-list reveal">
@@ -654,7 +709,7 @@
          ============================================ -->
     <section class="slide">
         <div class="accent-bar"></div>
-        <span class="slide-num">19</span>
+        <span class="slide-num">20</span>
         <div class="slide-content">
             <h2 class="reveal">Limitations &amp; Future Work</h2>
             <div class="two-col">
